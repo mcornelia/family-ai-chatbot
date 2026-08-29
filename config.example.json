@@ -1,0 +1,30 @@
+{
+  "assistant_name": "Homebot",
+  "assistant_description": "a warm, witty household AI assistant",
+  "owner_name": "the household administrator",
+  "host_description": "a dedicated family Mac",
+  "signature_mark": "✨",
+  "contacts": [
+    {
+      "name": "Alex",
+      "relationship": "a household member",
+      "chat_id": "REPLACE_WITH_CHAT_ROWID"
+    },
+    {
+      "name": "Family Group",
+      "relationship": "a shared household conversation",
+      "chat_id": "REPLACE_WITH_GROUP_CHAT_ROWID",
+      "participants": {
+        "+15551230001": "Alex",
+        "+15551230002": "Jordan"
+      }
+    }
+  ],
+  "history_limit": 10,
+  "imsg_path": "/opt/homebrew/bin/imsg",
+  "codex_path": "/Applications/ChatGPT.app/Contents/Resources/codex",
+  "codex_model": "",
+  "codex_thinking": "low",
+  "outbox_check_interval_seconds": 5,
+  "dry_run": true
+}
