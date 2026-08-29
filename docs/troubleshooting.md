@@ -36,3 +36,22 @@ launchctl bootout "gui/$(id -u)/com.family-ai.courier"
 ```
 
 Messages remains usable after the Courier stops.
+
+## A Python or ChatGPT update broke the LaunchAgent
+
+The LaunchAgent pins the resolved Python path and the configuration pins the Codex path. From the repository checkout, re-run:
+
+```sh
+make check
+./install.sh --activate
+```
+
+This refreshes the installed runtime and LaunchAgent while preserving configuration, state, and outbox data.
+
+## Remove the Courier
+
+```sh
+./install.sh --uninstall
+```
+
+The command removes the LaunchAgent and installed runtime but preserves configuration, state, outbox, and logs for deliberate review or manual removal.

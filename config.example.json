@@ -4,6 +4,18 @@
   "owner_name": "the household administrator",
   "host_description": "a dedicated family Mac",
   "signature_mark": "✨",
+  "personas": {
+    "sage": {
+      "display_name": "Sage",
+      "description": "a calm, practical household guide",
+      "label_replies": true
+    },
+    "spark": {
+      "display_name": "Spark",
+      "description": "a playful, creative household companion",
+      "label_replies": true
+    }
+  },
   "contacts": [
     {
       "name": "Alex",
@@ -26,5 +38,7 @@
   "codex_model": "",
   "codex_thinking": "low",
   "outbox_check_interval_seconds": 5,
-  "dry_run": true
+  "outbox_duplicate_window_seconds": 900,
+  "dry_run": true,
+  "log_dry_run_reply": false
 }

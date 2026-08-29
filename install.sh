@@ -8,12 +8,24 @@ LOG_ROOT="${HOME}/Library/Logs/Family AI Courier"
 LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.family-ai.courier.plist"
 PYTHON_BIN=""
 ACTIVATE=false
+UNINSTALL=false
 
 if [[ "${1:-}" == "--activate" ]]; then
   ACTIVATE=true
+elif [[ "${1:-}" == "--uninstall" ]]; then
+  UNINSTALL=true
 elif [[ $# -gt 0 ]]; then
-  echo "Usage: ./install.sh [--activate]" >&2
+  echo "Usage: ./install.sh [--activate|--uninstall]" >&2
   exit 2
+fi
+
+if [[ "${UNINSTALL}" == true ]]; then
+  launchctl bootout "gui/$(id -u)/com.family-ai.courier" 2>/dev/null || true
+  rm -f "${LAUNCH_AGENT}" "${INSTALL_ROOT}/courier.py"
+  rmdir "${INSTALL_ROOT}" 2>/dev/null || true
+  echo "Removed the installed Courier runtime and LaunchAgent."
+  echo "Preserved configuration, state, outbox, and logs under your Library folder."
+  exit 0
 fi
 
 for candidate in python3.13 python3.12 python3.11 python3; do
@@ -30,6 +42,7 @@ if [[ -z "${PYTHON_BIN}" ]]; then
 fi
 
 mkdir -p "${INSTALL_ROOT}" "${SUPPORT_ROOT}/outbox" "${LOG_ROOT}" "${HOME}/Library/LaunchAgents"
+chmod 700 "${SUPPORT_ROOT}" "${SUPPORT_ROOT}/outbox" "${LOG_ROOT}"
 install -m 755 "${PROJECT_ROOT}/courier.py" "${INSTALL_ROOT}/courier.py"
 
 CONFIG_PATH="${SUPPORT_ROOT}/config.json"
