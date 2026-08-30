@@ -40,11 +40,29 @@ API-key authentication is possible, but it changes the billing, credential-manag
 
 ## Quick start
 
+### 0. Check the command-line tools
+
+Run setup from the chatbot's dedicated macOS login, not as root. On a fresh Mac, follow the [Homebrew installation guide](https://docs.brew.sh/Installation), including the Xcode Command Line Tools and the installer's PATH instructions. Have the Mac's administrator help with that one-time installation if needed.
+
+Check the tools before continuing:
+
+```sh
+brew --version && git --version && make --version
+```
+
+Install the [Python version used by this walkthrough](https://formulae.brew.sh/formula/python@3.11) and check it:
+
+```sh
+brew install python@3.11 && python3.11 --version
+```
+
+Use `python3.11` in the commands below. Plain `python3` can still point to Apple's older Python even after a newer version is installed. Stop and fix any failed prerequisite before proceeding. Other Python versions supported by the project can be used deliberately, but keep the interpreter consistent across tests, foreground runs, and installation.
+
 ### 1. Install and verify `imsg`
 
 ```sh
-brew install steipete/tap/imsg
-imsg --version
+brew install steipete/tap/imsg &&
+imsg --version &&
 imsg chats --limit 3
 ```
 
@@ -58,12 +76,20 @@ Install ChatGPT for macOS, sign in with the household's dedicated ChatGPT accoun
 /Applications/ChatGPT.app/Contents/Resources/codex login status
 ```
 
+If it reports that you are not logged in, run:
+
+```sh
+/Applications/ChatGPT.app/Contents/Resources/codex login
+```
+
+Complete the browser sign-in using the chatbot's chosen ChatGPT account, then repeat `login status`. This is the [documented CLI sign-in flow](https://learn.chatgpt.com/docs/auth#sign-in-with-chatgpt). Do not proceed until it reports ChatGPT authentication.
+
 ### 3. Clone, test, and install
 
 ```sh
-git clone https://github.com/mcornelia/family-ai-chatbot.git
-cd family-ai-chatbot
-make check
+git clone https://github.com/mcornelia/family-ai-chatbot.git &&
+cd family-ai-chatbot &&
+make check PYTHON=python3.11 &&
 ./install.sh
 ```
 
@@ -89,14 +115,20 @@ Never commit the real configuration. It contains private chat identifiers even i
 
 ### 5. Try one live conversation
 
-The installer leaves the service stopped, and the example configuration has sending disabled. When you are ready to receive a real reply, set `dry_run` to `false` in the private config. No separate dry run is required.
-
 Before starting, confirm no other Courier process or LaunchAgent is running and the scheduled outbox is empty (`list-outbox` in [Operations](#operations) shows its contents). If this is an existing installation, stop it and review its pending messages first; do not delete configuration or delivery history just to test.
+
+From the downloaded `family-ai-chatbot` folder, **enable replies** when you are ready:
+
+```sh
+python3.11 courier.py enable-replies
+```
+
+This updates only the sending setting in the private configuration. It does not start the service, read Messages, call ChatGPT, or send anything. It refuses incomplete configurations or unfinished/unreadable scheduled messages; fix those before continuing. Existing settings, conversation state, and scheduled records are preserved. Repeating the command is harmless. The command prepares the next start; it does not reconfigure a running process.
 
 Run the Courier in the foreground—leave this Terminal window open so you can watch it:
 
 ```sh
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   --state "$HOME/Library/Application Support/Family AI Courier/state.json"
 ```
@@ -120,7 +152,7 @@ Use this only if you want to inspect the reply-generation path without texting a
 To test only the model connection with synthetic text, use this optional command instead. Replace `Your test chat label` with the configured contact's `name`; this command prints the generated answer but never sends it:
 
 ```sh
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   test-prompt "Your test chat label" "Hello from the setup test"
 ```
@@ -158,13 +190,13 @@ tail -f "$HOME/Library/Logs/Family AI Courier/courier.log"
 Queue and inspect a scheduled message:
 
 ```sh
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   queue-message "Family Group" \
   --send-at "2026-09-01T08:00:00-04:00" \
   --text "Good morning!"
 
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   list-outbox
 ```
@@ -172,7 +204,7 @@ python3 courier.py \
 Cancel a pending item:
 
 ```sh
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   cancel-message MESSAGE_ID
 ```
@@ -180,11 +212,11 @@ python3 courier.py \
 Preview and then delete delivered or canceled outbox records older than 30 days:
 
 ```sh
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   purge-outbox --older-than-days 30
 
-python3 courier.py \
+python3.11 courier.py \
   --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
   purge-outbox --older-than-days 30 --confirm
 ```
@@ -197,7 +229,7 @@ The installed runtime is a copy; `git pull` alone does not update it. Re-test an
 
 ```sh
 git pull --ff-only
-make check
+make check PYTHON=python3.11
 ./install.sh --activate
 ```
 
@@ -228,7 +260,7 @@ Read [SECURITY.md](SECURITY.md) before enabling automatic sending.
 ## Tests
 
 ```sh
-make check
+make check PYTHON=python3.11
 ```
 
 The suite is synthetic: it mocks `imsg` and Codex and never opens Messages or sends a message. GitHub Actions runs it on Python 3.11, 3.12, and 3.13. There is no automated macOS Messages integration test, so repeat the harmless manual checks after significant OS, ChatGPT, `imsg`, or Python updates.

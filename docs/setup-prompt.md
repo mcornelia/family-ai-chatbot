@@ -1,6 +1,6 @@
 # Supervised Codex setup prompt
 
-Use this prompt only after reading the repository's safety warning. Paste it into a Codex task running locally on the dedicated Mac. Stay present for permission prompts, enter account credentials yourself, and approve one supervised live test before enabling replies for the family. A dry run is optional, not a required setup stage.
+Use this prompt only after reading the repository's safety warning. Paste it into a Codex task running locally on the dedicated Mac. Stay present for permission prompts, enter account credentials yourself, and approve one supervised live test before enabling replies for the family.
 
 Replace the bracketed values first. Do not paste phone numbers, Apple Account addresses, passwords, tokens, or private chat text into this prompt.
 
@@ -16,12 +16,12 @@ My desired public labels are:
 - approved chat labels: [CHAT LABELS ONLY — NO ADDRESSES OR IDS]
 
 Follow this sequence:
-1. Verify macOS, Python 3.11+, imsg, Messages sign-in, and the bundled Codex CLI. Explain any missing permission and let me approve it in macOS myself.
-2. Run make check before installation. Stop and report any failure.
+1. Verify macOS, Homebrew, Git, make, Python 3.11+, imsg, Messages sign-in, and the bundled Codex CLI. Help me install missing prerequisites with appropriate administrator approval, while keeping Courier setup under the chatbot's macOS login. Explain any missing permission and let me approve it in macOS myself. Run the configured Codex CLI's login status; if signed out, guide me through its browser login and recheck for ChatGPT authentication.
+2. Run make check PYTHON=python3.11 before installation, using the same supported interpreter for the later foreground service. If deliberately using another supported version, use it consistently. Stop and report any failure.
 3. Run ./install.sh without activation.
 4. Ask before accessing real Messages data. Help me obtain numeric chat row IDs locally with imsg. Do not echo private handles or IDs back into chat. Have me edit the private config file directly.
 5. Begin with only the private chat between my phone and the bot. Remove unused example contacts, replace every REPLACE_ placeholder, and keep history_limit bounded. Confirm no other Courier instance is running and the scheduled outbox is empty. If an existing installation has pending messages, stop and help me review them without deleting its history. Quiet hours and mention-only mode are not included in this reference implementation.
-6. Explain that the test will send context to ChatGPT and a real reply to that one chat. Pause for my explicit approval before setting dry_run to false and starting the foreground service. Do not require a separate dry run or synthetic model test unless troubleshooting calls for it.
+6. Explain that the test will send context to ChatGPT and a real reply to that one chat. Pause for my explicit approval before running python3.11 courier.py enable-replies and starting the foreground service. The enable-replies command only updates the configuration; stop if it reports a problem. Do not start the foreground service until it succeeds.
 7. Once the service reports that it is ready, ask me to send one harmless incoming message. Verify exactly one reply in the same chat and no self-reply loop. Stop the foreground process and confirm it exited. If anything fails, troubleshoot without broadening the chat allowlist.
 8. After that test passes, ask for separate approval to add consented family chats and run ./install.sh --activate. Do not run the background service alongside the foreground process.
 9. Verify one reply in the direct chat and one consented group chat. Restart the Mac, sign back into the dedicated account, and check that old messages are not replayed. Test the emergency stop.
