@@ -28,7 +28,7 @@ if [[ "${UNINSTALL}" == true ]]; then
   exit 0
 fi
 
-for candidate in python3.13 python3.12 python3.11 python3; do
+for candidate in python3.11 python3.13 python3.12 python3; do
   candidate_path="$(command -v "${candidate}" 2>/dev/null || true)"
   if [[ -n "${candidate_path}" ]] && "${candidate_path}" -c 'import sys; raise SystemExit(sys.version_info < (3, 11))'; then
     PYTHON_BIN="${candidate_path}"
@@ -77,7 +77,8 @@ echo "Installed the Courier and LaunchAgent definition."
 echo "Edit ${CONFIG_PATH}, replace every REPLACE_ value, and start with only your private test chat."
 
 if [[ "${ACTIVATE}" != true ]]; then
-  echo "Follow the README's supervised live test: set dry_run false when ready, then run in the foreground."
+  echo "When ready for the README's supervised live test, enable replies (this does not start or send):"
+  printf '  "%s" "%s" --config "%s" enable-replies\n' "${PYTHON_BIN}" "${PROJECT_ROOT}/courier.py" "${CONFIG_PATH}"
   echo "After that test passes and the foreground process has stopped, run: ./install.sh --activate"
   exit 0
 fi

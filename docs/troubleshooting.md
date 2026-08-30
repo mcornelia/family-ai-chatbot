@@ -1,5 +1,13 @@
 # Troubleshooting
 
+## A setup command is not found
+
+Follow the README's prerequisites first: Homebrew (including Command Line Tools and its PATH setup), Git, make, and `brew install python@3.11`. Use `python3.11`, not an unverified `python3`, for the walkthrough. Run commands from the downloaded project folder under the chatbot's macOS login.
+
+## Codex reports that it is not logged in
+
+Run `/Applications/ChatGPT.app/Contents/Resources/codex login`, finish the browser flow with the chosen ChatGPT account, then repeat the same command with `login status`. If Codex is installed elsewhere, use the path from the private configuration. Never paste account credentials into a chat.
+
 ## `imsg` cannot read Messages
 
 Confirm Messages is signed in, then run:
@@ -24,7 +32,11 @@ Check, in order:
 4. `codex login status` succeeds for the same macOS user.
 5. The configured Codex path is still valid after an app update.
 6. The error log contains no stale Full Disk Access or Automation denial.
-7. `dry_run` is `false` if you expect a real reply. Configuration changes require a process restart.
+7. Replies were enabled before startup. For a fresh setup, stop the service and run `python3.11 courier.py enable-replies`, then restart. Configuration changes require a process restart.
+
+## Enable replies reports a problem
+
+Fix missing/invalid JSON, remaining placeholders, or nonnumeric chat IDs in the private configuration. The command also refuses unfinished or unreadable scheduled records; stop and review those without deleting history. See the configuration guide for deliberately resuming an existing scheduled queue. The command does not start the service or send anything.
 
 ## Optional: troubleshoot without sending
 
@@ -51,7 +63,7 @@ Messages remains usable after the Courier stops.
 The LaunchAgent pins the resolved Python path and the configuration pins the Codex path. From the repository checkout, re-run:
 
 ```sh
-make check
+make check PYTHON=python3.11
 ./install.sh --activate
 ```
 

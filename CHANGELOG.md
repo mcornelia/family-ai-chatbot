@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Explicit `enable-replies` setup command: validates the private configuration and enables replies for the next start without accessing Messages, calling ChatGPT, starting a service, or sending. Preserves other settings and history; refuses incomplete configurations and unfinished/unreadable scheduled records.
+- Setup regression tests for idempotence, private file permissions, rejected inputs, outbox preservation, and atomic-write failures.
+
 ### Fixed
 
 - Dry-run mode now pauses scheduled delivery as well as conversational sends, without querying Messages or modifying outbox records. Pending and retrying scheduled messages remain eligible when live mode resumes.
@@ -11,6 +16,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Setup now checks Homebrew, Git, make, and a consistent Python 3.11 interpreter, and includes a browser-login fallback when Codex is signed out. The installer prefers Python 3.11 when available to match the walkthrough.
 - Setup now uses one supervised live test in the operator's private chat before expanding to family chats and background operation. Dry-run and synthetic model tests remain optional troubleshooting tools.
 - README, setup prompt, configuration/security notes, and installer guidance now describe the same workflow and explain how queued messages behave when live mode resumes.
 

@@ -947,6 +947,77 @@ def configured_outbox(config: dict[str, Any], override: Path | None) -> Path:
     return override or Path(config.get("outbox_path", DEFAULT_OUTBOX))
 
 
+def enable_replies_command(config_path: Path, outbox_override: Path | None) -> int:
+    """Opt into replies on the next start; never start services or send messages."""
+    try:
+        if config_path.is_symlink():
+            raise ValueError("use a regular private configuration file")
+        config = load_json(config_path)
+        validate_config(config)
+        if "REPLACE_" in json.dumps(config):
+            raise ValueError("replace the example values first")
+        if any(
+            not re.fullmatch(r"[1-9][0-9]*", str(contact["chat_id"]))
+            for contact in config["contacts"]
+        ):
+            raise ValueError("chat IDs must be positive integers")
+    except (OSError, ValueError, TypeError, OverflowError):
+        print(
+            "Replies not enabled. Check that the private configuration exists, contains valid "
+            "JSON and exact numeric chat IDs, and has no REPLACE_ placeholders. "
+            "Use a regular file, not a symbolic link.",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        outbox = configured_outbox(config, outbox_override)
+        # Fail closed instead of list_outbox's log-and-skip behavior: an unreadable
+        # record could hide a scheduled message that would send on the next start.
+        if outbox.exists():
+            for path in outbox.iterdir():
+                if path.suffix == ".json":
+                    entry = load_json(path)
+                    if entry.get("status") not in {"delivered", "canceled"}:
+                        raise ValueError("review unfinished scheduled messages")
+    except (OSError, ValueError, TypeError):
+        print(
+            "Replies not enabled. Review pending or unreadable scheduled outbox records first; "
+            "nothing has been changed. See the configuration guide for resuming an existing setup.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if config.get("dry_run", False) is False:
+        print("Replies are already enabled. No files changed; no service started or message sent.")
+        return 0
+
+    config["dry_run"] = False
+    temporary_path: Path | None = None
+    try:
+        # NamedTemporaryFile is owner-only from creation; replace atomically only
+        # after the whole configuration has been written successfully.
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=config_path.parent,
+            prefix=f".{config_path.name}.", suffix=".tmp", delete=False,
+        ) as handle:
+            temporary_path = Path(handle.name)
+            json.dump(config, handle, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary_path.replace(config_path)
+    except OSError:
+        print("Replies not enabled. Could not save the private configuration.", file=sys.stderr)
+        return 1
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+    print("Replies enabled for the configured chats on the next start. No service started or message sent.")
+    return 0
+
+
 def queue_message_command(
     config_path: Path,
     outbox_override: Path | None,
@@ -1031,6 +1102,9 @@ def main() -> int:
     parser.add_argument("--log", type=Path)
     parser.add_argument("--outbox", type=Path)
     subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser(
+        "enable-replies", help="enable replies in the private configuration without starting or sending"
+    )
     test_parser = subparsers.add_parser("test-prompt", help="generate but do not send a reply")
     test_parser.add_argument("contact")
     test_parser.add_argument("text")
@@ -1054,6 +1128,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.command == "enable-replies":
+        return enable_replies_command(args.config, args.outbox)
     if args.command == "test-prompt":
         return test_prompt(args.config, args.contact, args.text)
     if args.command == "queue-message":

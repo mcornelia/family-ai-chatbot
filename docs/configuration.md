@@ -31,12 +31,28 @@ The default configuration path is:
 | `codex_thinking` | Optional Codex reasoning-effort setting. |
 | `outbox_check_interval_seconds` | Local scheduled-outbox check interval. No model request occurs while idle. |
 | `outbox_duplicate_window_seconds` | Look-back window used to find a recent identical outgoing scheduled message; accepted range is 60–86,400 seconds. The default is 900 seconds. |
-| `dry_run` | Optional diagnostic mode: when `true`, generates conversational replies without sending them and pauses scheduled delivery without changing queued records. The example starts at `true` to prevent accidental sends; set `false` when ready for the supervised live test. Reply bodies are not logged by default. |
+| `dry_run` | Optional diagnostic mode: when `true`, generates conversational replies without sending them and pauses scheduled delivery without changing queued records. The example starts at `true` to prevent accidental sends. The normal setup command, `python3.11 courier.py enable-replies`, sets it to `false` for the supervised live test. Reply bodies are not logged by default. |
 | `log_dry_run_reply` | Optional boolean, default `false`. Setting it to `true` writes model-generated reply text to logs and may expose private conversation-derived content. |
 
 Keep personal configuration outside the repository. The installer creates it with mode `0600`, and `.gitignore` excludes common local configuration filenames.
 
+## Enable replies for setup
+
+With the service stopped and only your private test chat configured, run this from the downloaded project folder:
+
+```sh
+python3.11 courier.py enable-replies
+```
+
+For a non-default configuration, put the path before the command: `python3.11 courier.py --config "/path/to/config.json" enable-replies`.
+
+This validates the configuration, requires positive numeric chat IDs and no `REPLACE_` placeholders, then atomically updates only the sending setting. The resulting configuration is owner-only (`0600`). The command does not start a service, access Messages, call ChatGPT, alter state, or send anything. Repeating it leaves an already-enabled configuration unchanged.
+
+The command refuses pending, retrying, unknown, or unreadable scheduled records. It never deletes them. For an existing installation, stop all Courier instances and review those records before deliberately resuming delivery using the manual setting below. Do not clear history just to make the setup command succeed.
+
 Configuration is loaded at process startup, not reloaded while running. Stop the Courier before editing it, then restart. Before resuming live mode, inspect pending and retrying scheduled messages: overdue entries become eligible immediately. Dry-run conversations still use the ChatGPT service and advance their saved message cursor, so those incoming messages are not answered again when live mode resumes.
+
+For optional diagnostic use, set `dry_run` to `true`. After reviewing queued messages, set it to `false` to resume live delivery and restart. This manual path is for an operator who has reviewed the existing queue, not the normal first-time setup.
 
 ## Optional `@persona` routing
 
@@ -61,7 +77,7 @@ This reference implementation does not include quiet hours or mention-only activ
 Scheduled text is stored in owner-readable JSON files. `list-outbox` never prints that text. Preview old terminal records before deleting them:
 
 ```sh
-python3 courier.py --config "/path/to/config.json" purge-outbox --older-than-days 30
+python3.11 courier.py --config "/path/to/config.json" purge-outbox --older-than-days 30
 ```
 
 Run the same command with `--confirm` to delete matching **delivered** and **canceled** records. Pending or retrying messages are never selected. Cleanup is manual rather than automatic so an operator can retain the audit history that fits the household's policy.
