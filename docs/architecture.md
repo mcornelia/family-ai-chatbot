@@ -34,6 +34,8 @@ Automatic conversational replies are intentionally **at most once**. The saved h
 
 Scheduled outbox delivery has different semantics: pending failures are retained with bounded backoff, duplicate-checked before sending, and marked delivered after a successful send command.
 
+With `dry_run: true`, conversational reply generation still runs but the send is skipped and the incoming-message cursor advances. Scheduled delivery is paused before any Messages lookup or delivery-state update; pending and retrying records remain untouched. After restarting with `dry_run: false`, overdue scheduled entries become eligible again, while conversational events already handled in dry-run mode are not replayed.
+
 ## Concurrency and retention
 
 Each allowlisted chat has its own watcher, but incoming events share one reply-processing queue. This preserves simple ordering and is suitable for a small household; one slow Codex request can temporarily delay every chat for up to the model-process timeout.

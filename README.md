@@ -4,7 +4,7 @@ A small, local-first iMessage bridge for a household AI running on a dedicated M
 
 **Family AI Courier** is the custom Python service in this repository. It watches only explicitly allowlisted Messages chats, sends a bounded slice of recent context to an ephemeral Codex CLI run, and returns one short reply to the same chat. It uses the Mac's existing Messages identity and an authenticated Codex CLI—no OpenClaw service or custom OpenAI API integration is required.
 
-> **Read this first:** this software can read private conversations and send messages automatically. Use a dedicated Mac account, obtain consent from every participant, start in `dry_run` mode, and keep an immediate stop procedure available. It is not an emergency, medical, legal, or financial system.
+> **Read this first:** this software can read private conversations and send messages automatically. Use a dedicated Mac account, obtain consent from every participant, start with one supervised live test in your own private chat with the bot, and keep a stop procedure available. It is not an emergency, medical, legal, or financial system.
 
 The longer design story is in [Build a Family AI ChatBot](https://mcornelia.com/posts/family-ai-chatbot.html). If you already use Codex, the [copy/paste setup prompt](docs/setup-prompt.md) can guide a supervised installation.
 
@@ -83,21 +83,17 @@ Edit:
 ~/Library/Application Support/Family AI Courier/config.json
 ```
 
-Replace every `REPLACE_...` placeholder. Map exact sender handles to friendly labels for a group chat, and keep `dry_run` set to `true`. See [Configuration](docs/configuration.md) for every field.
+Replace every `REPLACE_...` placeholder and begin with **only one contact entry**: the private chat between your phone and the bot. Remove the other example contact entries; add family and group chats after this test passes. See [Configuration](docs/configuration.md) for every field.
 
 Never commit the real configuration. It contains private chat identifiers even if it contains no password.
 
-### 5. Test without sending
+### 5. Try one live conversation
 
-Generate a synthetic reply through Codex:
+The installer leaves the service stopped, and the example configuration has sending disabled. When you are ready to receive a real reply, set `dry_run` to `false` in the private config. No separate dry run is required.
 
-```sh
-python3 courier.py \
-  --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
-  test-prompt Alex "Hello from the setup test"
-```
+Before starting, confirm no other Courier process or LaunchAgent is running and the scheduled outbox is empty (`list-outbox` in [Operations](#operations) shows its contents). If this is an existing installation, stop it and review its pending messages first; do not delete configuration or delivery history just to test.
 
-Then run the Courier in the foreground, send one harmless incoming test message, and confirm that the log records a generated reply without printing its body:
+Run the Courier in the foreground—leave this Terminal window open so you can watch it:
 
 ```sh
 python3 courier.py \
@@ -105,24 +101,31 @@ python3 courier.py \
   --state "$HOME/Library/Application Support/Family AI Courier/state.json"
 ```
 
-Stop it with Control-C.
+Once it reports that it is ready, send one harmless message from your phone to the bot. Confirm exactly one reply appears in that private chat and the bot does not answer itself. Stop it with Control-C and wait for the process to exit. If the reply is missing or duplicated, stop and troubleshoot before adding anyone else.
 
 ### 6. Activate and verify
 
-After the chat IDs and dry-run behavior are correct, change `dry_run` to `false`, then:
+With the foreground process stopped, add only consented family chats to the configuration and map exact sender handles to friendly labels for group chats. Then enable background operation:
 
 ```sh
 ./install.sh --activate
 ```
 
-Send one harmless message in one approved direct chat and confirm exactly one reply appears there. Repeat once in a consented group chat, restart the Mac, and verify that old messages are not replayed.
+Repeat one harmless test in the direct chat and one consented group chat. Restart the Mac, sign back into the dedicated account, and verify that old messages are not replayed. Test the emergency stop before leaving the service unattended.
 
-A successful private dry run looks like this—the generated text itself is intentionally absent:
+### Optional: diagnose without sending
 
-```text
-INFO Incoming row 123 from Alex (18 chars)
-INFO DRY RUN generated a 96-character reply to Alex; body not logged
+Use this only if you want to inspect the reply-generation path without texting anyone. Stop the running service, set `dry_run` to `true`, and run the foreground command from step 5. Incoming conversations still supply bounded context to ChatGPT and use your account's limits, but no conversational replies are sent. Scheduled delivery is paused without changing queued records. Generated reply bodies stay out of logs unless you explicitly enable `log_dry_run_reply`.
+
+To test only the model connection with synthetic text, use this optional command instead. Replace `Your test chat label` with the configured contact's `name`; this command prints the generated answer but never sends it:
+
+```sh
+python3 courier.py \
+  --config "$HOME/Library/Application Support/Family AI Courier/config.json" \
+  test-prompt "Your test chat label" "Hello from the setup test"
 ```
+
+Stop the process before changing modes. Before setting `dry_run` back to `false` and restarting, review pending or retrying scheduled messages: anything overdue becomes eligible to send. Incoming messages already processed during dry-run mode are not replayed. A custom rewrite should also verify its no-send behavior in automated tests before a supervised live test.
 
 ## Optional personalities
 

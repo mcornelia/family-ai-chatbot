@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Dry-run mode now pauses scheduled delivery as well as conversational sends, without querying Messages or modifying outbox records. Pending and retrying scheduled messages remain eligible when live mode resumes.
+- Regression tests cover unchanged outbox records, delivery after leaving dry-run mode, and no-send conversational behavior; unit tests block unmocked external commands.
+
+### Changed
+
+- Setup now uses one supervised live test in the operator's private chat before expanding to family chats and background operation. Dry-run and synthetic model tests remain optional troubleshooting tools.
+- README, setup prompt, configuration/security notes, and installer guidance now describe the same workflow and explain how queued messages behave when live mode resumes.
+
 ## [0.2.0] - 2026-08-29
 
 ### Added

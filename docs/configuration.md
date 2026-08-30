@@ -31,10 +31,12 @@ The default configuration path is:
 | `codex_thinking` | Optional Codex reasoning-effort setting. |
 | `outbox_check_interval_seconds` | Local scheduled-outbox check interval. No model request occurs while idle. |
 | `outbox_duplicate_window_seconds` | Look-back window used to find a recent identical outgoing scheduled message; accepted range is 60–86,400 seconds. The default is 900 seconds. |
-| `dry_run` | When true, generates a reply without sending it. The body is not logged by default. |
+| `dry_run` | Optional diagnostic mode: when `true`, generates conversational replies without sending them and pauses scheduled delivery without changing queued records. The example starts at `true` to prevent accidental sends; set `false` when ready for the supervised live test. Reply bodies are not logged by default. |
 | `log_dry_run_reply` | Optional boolean, default `false`. Setting it to `true` writes model-generated reply text to logs and may expose private conversation-derived content. |
 
 Keep personal configuration outside the repository. The installer creates it with mode `0600`, and `.gitignore` excludes common local configuration filenames.
+
+Configuration is loaded at process startup, not reloaded while running. Stop the Courier before editing it, then restart. Before resuming live mode, inspect pending and retrying scheduled messages: overdue entries become eligible immediately. Dry-run conversations still use the ChatGPT service and advance their saved message cursor, so those incoming messages are not answered again when live mode resumes.
 
 ## Optional `@persona` routing
 

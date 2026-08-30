@@ -11,7 +11,8 @@ Family AI Courier can read approved Messages conversations and send model-genera
 - Keep the automatic Codex run ephemeral, in an empty temporary directory, inside a read-only sandbox, and isolated from user configuration. Its prompt must continue to forbid tool use and outside actions; do not describe this as a hard zero-tool mode.
 - Do not disable System Integrity Protection. The standard `imsg` history, watch, and send commands do not require private-framework injection.
 - Review OpenAI data controls and your household's retention expectations before processing private conversations.
-- Keep `dry_run` enabled until chat selection, prompt behavior, and loop prevention have been tested.
+- Start with one supervised live test in the operator's private chat with the bot, an empty scheduled outbox, and no other Courier instance running. Verify the destination and exactly one reply before adding consented family chats or enabling background operation.
+- `dry_run` is an optional diagnostic mode, not a required installation stage. It blocks conversational sends and pauses scheduled delivery without modifying queued records. Review overdue scheduled messages before resuming live mode.
 - Keep `log_dry_run_reply` false unless intentionally accepting private generated text in logs.
 - Purge old delivered and canceled outbox records according to the household's retention policy.
 
