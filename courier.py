@@ -213,6 +213,12 @@ def process_due_outbox(
     outbox_dir: Path,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
+    """Deliver due scheduled messages, leaving the outbox untouched in dry-run mode."""
+    if config.get("dry_run", False):
+        # Do not query Messages, send, or advance delivery/retry state. Queued
+        # items remain eligible when the operator deliberately resumes live mode.
+        return []
+
     current = (now or utc_now()).astimezone(timezone.utc)
     imsg = Path(config.get("imsg_path", DEFAULT_IMSG))
     duplicate_window = int(
@@ -893,6 +899,8 @@ def daemon(
         entry.get("status") in {"pending", "retrying"} for entry in list_outbox(outbox_dir)
     )
     logging.info("Model backend: authenticated Codex CLI")
+    if config.get("dry_run", False):
+        logging.info("DRY RUN: conversational sends are disabled; scheduled outbox delivery is paused")
     logging.info(
         "%s is ready for %s; outbox has %s pending item(s)",
         APP_NAME,

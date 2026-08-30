@@ -18,6 +18,13 @@ SPEC.loader.exec_module(courier)
 
 class CourierTests(unittest.TestCase):
     def setUp(self):
+        command_guard = mock.patch.object(
+            courier,
+            "run_checked",
+            side_effect=AssertionError("External commands must be mocked in unit tests"),
+        )
+        command_guard.start()
+        self.addCleanup(command_guard.stop)
         self.config = {
             "assistant_name": "Homebot",
             "owner_name": "Alex",
@@ -334,6 +341,86 @@ class CourierTests(unittest.TestCase):
             self.assertEqual(saved["delivery_reason"], "sent_and_verified")
             self.assertTrue(saved["history_verified"])
 
+    def test_dry_run_outbox_preserves_every_record_without_messages_access(self):
+        with tempfile.TemporaryDirectory() as temp:
+            outbox = Path(temp)
+            now = datetime(2026, 8, 30, 12, tzinfo=timezone.utc)
+            for status in ("pending", "retrying", "delivered", "canceled", "future"):
+                entry = courier.queue_message_file(
+                    self.config,
+                    outbox,
+                    "Family Group",
+                    now + timedelta(hours=1) if status == "future" else now - timedelta(minutes=1),
+                    f"Private scheduled text: {status}",
+                    message_id_value=status,
+                    now=now - timedelta(days=1),
+                )
+                if status not in {"pending", "future"}:
+                    courier.mark_outbox_entry(
+                        outbox / f"{status}.json", entry, status=status, attempts=2
+                    )
+            before = {
+                path.name: (path.read_bytes(), path.stat().st_mtime_ns)
+                for path in outbox.iterdir()
+            }
+            with (
+                mock.patch.object(courier, "recent_history", return_value=[]) as history,
+                mock.patch.object(courier, "send_reply") as send,
+                mock.patch.object(courier, "verify_outgoing", return_value=True) as verify,
+            ):
+                for _ in range(2):
+                    self.assertEqual(
+                        courier.process_due_outbox(dict(self.config, dry_run=True), outbox, now=now),
+                        [],
+                    )
+            history.assert_not_called()
+            send.assert_not_called()
+            verify.assert_not_called()
+            after = {
+                path.name: (path.read_bytes(), path.stat().st_mtime_ns)
+                for path in outbox.iterdir()
+            }
+            self.assertEqual(after, before)
+
+    def test_dry_run_outbox_message_can_send_once_after_live_mode_resumes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            outbox = Path(temp)
+            now = datetime(2026, 8, 30, 12, tzinfo=timezone.utc)
+            entry = courier.queue_message_file(
+                self.config,
+                outbox,
+                "Family Group",
+                now - timedelta(minutes=1),
+                "Resume this synthetic delivery",
+                now=now - timedelta(days=1),
+            )
+            with (
+                mock.patch.object(courier, "recent_history", return_value=[]) as history,
+                mock.patch.object(courier, "send_reply") as send,
+                mock.patch.object(courier, "verify_outgoing", return_value=True) as verify,
+            ):
+                self.assertEqual(
+                    courier.process_due_outbox(dict(self.config, dry_run=True), outbox, now=now),
+                    [],
+                )
+                history.assert_not_called()
+                send.assert_not_called()
+                verify.assert_not_called()
+                self.assertEqual(courier.load_json(outbox / f"{entry['id']}.json"), entry)
+
+                results = courier.process_due_outbox(
+                    dict(self.config, dry_run=False), outbox, now=now
+                )
+                self.assertEqual(results[0]["status"], "delivered")
+                self.assertEqual(results[0]["attempts"], 1)
+                self.assertEqual(
+                    courier.process_due_outbox(dict(self.config, dry_run=False), outbox, now=now),
+                    [],
+                )
+                send.assert_called_once()
+                history.assert_called_once()
+                verify.assert_called_once()
+
     def test_successful_send_is_not_retried_when_history_lags(self):
         with tempfile.TemporaryDirectory() as temp:
             outbox = Path(temp)
@@ -458,10 +545,15 @@ class CourierTests(unittest.TestCase):
         state = {"contacts": {"3": {"last_rowid": 1, "name": "Family Group"}}}
         with tempfile.TemporaryDirectory() as temp:
             state_path = Path(temp) / "state.json"
-            with mock.patch.object(courier, "recent_history", return_value=[event]):
-                with mock.patch.object(courier, "model_reply", return_value="private generated text"):
-                    with self.assertLogs(level="INFO") as captured:
-                        courier.process_event(config, state, state_path, config["contacts"][0], event)
+            with (
+                mock.patch.object(courier, "recent_history", return_value=[event]),
+                mock.patch.object(courier, "model_reply", return_value="private generated text") as model,
+                mock.patch.object(courier, "send_reply") as send,
+                self.assertLogs(level="INFO") as captured,
+            ):
+                courier.process_event(config, state, state_path, config["contacts"][0], event)
+            model.assert_called_once()
+            send.assert_not_called()
         output = "\n".join(captured.output)
         self.assertIn("body not logged", output)
         self.assertNotIn("private generated text", output)

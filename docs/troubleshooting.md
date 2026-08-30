@@ -24,6 +24,15 @@ Check, in order:
 4. `codex login status` succeeds for the same macOS user.
 5. The configured Codex path is still valid after an app update.
 6. The error log contains no stale Full Disk Access or Automation denial.
+7. `dry_run` is `false` if you expect a real reply. Configuration changes require a process restart.
+
+## Optional: troubleshoot without sending
+
+Stop the service and set `dry_run` to `true`, then run it in the foreground as described in the README. It still uses ChatGPT for conversational replies, but skips sending them and pauses scheduled delivery. No queued record is marked delivered or retried. A fresh installation does not need this extra stage before its supervised live test.
+
+For a synthetic model-only check, use the README's optional `test-prompt` command. It prints the generated answer but does not send it.
+
+Before turning live mode back on, review the scheduled outbox and restart the process. Overdue pending or retrying messages become eligible to send; conversations already processed in dry-run mode are not replayed.
 
 ## Duplicate or self-reply appears
 

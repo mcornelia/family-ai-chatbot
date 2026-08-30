@@ -74,10 +74,11 @@ sed \
 install -m 600 "${rendered_plist}" "${LAUNCH_AGENT}"
 
 echo "Installed the Courier and LaunchAgent definition."
-echo "Edit ${CONFIG_PATH}, replace every REPLACE_ value, and keep dry_run true for the first test."
+echo "Edit ${CONFIG_PATH}, replace every REPLACE_ value, and start with only your private test chat."
 
 if [[ "${ACTIVATE}" != true ]]; then
-  echo "When configuration and macOS permissions are ready, run: ./install.sh --activate"
+  echo "Follow the README's supervised live test: set dry_run false when ready, then run in the foreground."
+  echo "After that test passes and the foreground process has stopped, run: ./install.sh --activate"
   exit 0
 fi
 
@@ -104,4 +105,5 @@ launchctl bootout "gui/$(id -u)/com.family-ai.courier" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "${LAUNCH_AGENT}"
 launchctl print "gui/$(id -u)/com.family-ai.courier"
 
-echo "Courier activated. Keep dry_run true until a foreground test has passed."
+echo "Courier activated using your configured dry_run setting. Verify one reply in each approved test chat."
+echo "If dry_run is true, conversational sends are disabled and scheduled delivery is paused."
